@@ -3,7 +3,8 @@
 #include <string>
 #include <sstream>
 #include <memory>
-#include <set>
+#include <map>
+#include <algorithm>
 
 
 using namespace std;
@@ -12,25 +13,40 @@ using namespace std;
 struct Result {
     int value;        // Valor do resultado
     string expr;      // String com a expressão gerada
-    bool operator<(const Result& other) const { // dar override para conseguir usar set
-            return value < other.value;
+    int parametrizacao; // Parametrização
+
+    bool operator<(const Result& other) const {
+        if (value != other.value) {
+            return value < other.value; // valor
+        }
+        return parametrizacao < other.parametrizacao; // parametrizacao
     }
 };
+
 
 // Função para calcular a operação usando a tabela
 int op(int a, int b, const vector<vector<int>>& table) {
     return table[a - 1][b - 1]; // Ajuste de índices (1-base para 0-base)
 }
 
-int contains(const vector<Result>& vector, int value){
-    int len = vector.size();
-    for (int i = 0; i < len; i++){
-        if (vector[i].value == value){
-            return 1; 
+void filterUnique(vector<Result>& results) {
+    map<int, Result> bestResults; // Maps `value` to the best `Result`
+
+    for (const auto& res : results) {
+        // If value not seen or parametrizacao is smaller, update
+        if (bestResults.find(res.value) == bestResults.end() || 
+            res.parametrizacao < bestResults[res.value].parametrizacao) {
+            bestResults[res.value] = res;
         }
     }
-    return 0;
+
+    // Rebuild the results vector while preserving order
+    results.clear();
+    for (const auto& res : bestResults) {
+        results.push_back(res.second);
+    }
 }
+
 
 void printMatrix(const vector<vector<vector<Result>>>& dp) {
     int m = dp.size(); // Number of rows/columns in the matrix
@@ -46,7 +62,7 @@ void printMatrix(const vector<vector<vector<Result>>>& dp) {
             } else {
                 cout << "[";
                 for (const auto& res : dp[i][j]) {
-                    cout << res.value << " "; // Print each value
+                    cout << res.expr << "|" << res.value << "|" << res.parametrizacao << " "; // Print each value
                 }
                 cout << "] ";
             }
@@ -66,11 +82,11 @@ void solve(int n, int m, const vector<vector<int>>& table, const vector<int>& se
     // Inicializar os elementos unicos da seq
     // Já agora vamos inicializar também a prox diagonal
     for (int i = 0; i < m; i++) {
-        dp[i][i].push_back({sequence[i], to_string(sequence[i])});
+        dp[i][i].push_back({sequence[i], to_string(sequence[i]), 0});
     }
     for (int i = 0; i < m - 1; i++) {
         int value = op(sequence[i], sequence[i+1], table);
-        dp[i][i+1].push_back({(value), to_string(value)});
+        dp[i][i+1].push_back({(value), dp[i][i][0].expr + dp[i+1][i+1][0].expr, i});
     }
 
     // vamos por cada diagonal, preenchendo a tabela da esquerda para direita, cima para baixo
@@ -84,24 +100,45 @@ void solve(int n, int m, const vector<vector<int>>& table, const vector<int>& se
             for (int left = 0; left < sub_lista1; left++){
                 value = op(dp[i][j-1][left].value, dp[i+diagonal][j][0].value, table); 
                 // colocamos todos os valores mas depois tiramos os repetidos noutro sitio para reduzir time complexity
-                dp[i][j].push_back({value, to_string(value)});
+                dp[i][j].push_back({value, dp[i][j-1][left].expr + dp[i+diagonal][j][0].expr, dp[i][j-1][left].parametrizacao});
 
             }
             for (int below = 0; below < sub_lista2; below++){
                 value = op(dp[i][j-diagonal][0].value, dp[i+1][j][below].value, table); 
                 // colocamos todos os valores mas depois tiramos os repetidos noutro sitio para reduzir time complexity
-                dp[i][j].push_back({value, to_string(value)});
+                dp[i][j].push_back({value, dp[i][j-diagonal][0].expr + dp[i+1][j][below].expr, dp[i+1][j][below].parametrizacao});
             }
             // dar skim a lista
-            set<Result> s(dp[i][j].begin(), dp[i][j].end());
-            dp[i][j].assign(s.begin(), s.end());
+            filterUnique(dp[i][j]);
         }   
     }
-
     printMatrix(dp);
-
-// no teste de input da print a dois 1's seguidos idk why
-
+    Result result;
+    result.parametrizacao = -1;
+    for (Result res: dp[0][m-1]){
+        if (desired_result == res.value){
+            if (result.parametrizacao == -1){
+                result.expr = res.expr;
+                result.parametrizacao = res.parametrizacao;
+            } else {
+                if (res.parametrizacao < result.parametrizacao){
+                    result.expr = res.expr;
+                    result.parametrizacao = res.parametrizacao;
+                }
+            }
+        }
+    }
+    int i = 0;
+    int flag = 0;
+    while (i < result.expr.length()){
+        if (flag == 1){
+            cout << result.expr[i] << ") ";
+        } else {
+            cout << "(" << result.expr[i] << " ";
+            if (result.parametrizacao == i){flag = 1;}
+        }
+        i++;
+    }
     printf("\n");
 }
 
@@ -138,4 +175,5 @@ int main() {
     solve(n, m, table, sequence, desired_result);
 
     return 0;
+    
 }
