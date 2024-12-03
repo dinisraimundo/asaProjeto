@@ -86,7 +86,7 @@ void printTrace(const shared_ptr<Result>& res) {
         printTrace(res->down);
         cout << ")";
     } else {
-        cout << res->left->value;
+        cout << res->value;
     }
 }
 
