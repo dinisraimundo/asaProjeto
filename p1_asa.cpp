@@ -127,6 +127,7 @@ void solve(int n, int m, const vector<vector<int>>& table, const vector<int>& se
     int len = dp[0][m - 1].size();
     for (int i = 0; i < len; i++){
         if (dp[0][m - 1][i].value == desired_result){
+            cout << desired_result << endl;
             printTrace(make_shared<Result>(dp[0][m - 1][i]));
             break;
         }
