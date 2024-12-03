@@ -11,8 +11,8 @@ using namespace std;
 
 // Estrutura para armazenar o valor e a expressão
 struct Result {
-    int value;        // Valor do resultado     // String com a expressão gerada
-    int parametrizacao; // Parametrização
+    int value;        
+    int parametrizacao;
     shared_ptr<Result> left; 
     shared_ptr<Result> down;
 
@@ -25,17 +25,15 @@ int op(int a, int b, const vector<vector<int>>& table) {
 }
 
 void filterUnique(vector<Result>& results) {
-    map<int, Result> bestResults; // Maps `value` to the best `Result`
+    map<int, Result> bestResults;
 
     for (Result res : results) {
-        // If value not seen or parametrizacao is smaller, update
         if (bestResults.find(res.value) == bestResults.end() || 
             res.parametrizacao < bestResults[res.value].parametrizacao) {
             bestResults[res.value] = res;
         }
     }
 
-    // Rebuild the results vector while preserving order
     results.clear();
     for (const auto& res : bestResults) {
         results.push_back(res.second);
@@ -77,82 +75,55 @@ bool find_in_vector(vector<Result>& results, int value){
     return false;
 }
 
-string buildExpression(const shared_ptr<Result>& res) {
-    if (!res) return ""; // Base case for null pointer
-
-    if (!res->left && !res->down) { // Base case: leaf node
-        return to_string(res->value);
-    }
-
-    string leftExpr = buildExpression(res->left);
-    string downExpr = buildExpression(res->down);
-
-    // Combine the current value into the expression
-    return "(" + leftExpr + " " + downExpr + ")";
-}
-
-void traceSolution(const shared_ptr<Result>& res) {
-    if (!res) {
-        cout << "No solution to trace.\n";
-        return;
-    }
-
-    // Generate the expression and print it
-    string expression = buildExpression(res);
-    cout << "Expression: " << expression << endl;
-}
 
 void printTrace(const shared_ptr<Result>& res) {
     if (!res) return;
 
     if (res->left || res->down) {
-        cout << res->value << ": ";
-        cout << res->left->value << "||" << res->down->value << endl;
+        cout << "(";
         printTrace(res->left);
+        cout << " ";
         printTrace(res->down);
+        cout << ")";
+    } else {
+        cout << res->left->value;
     }
 }
 
 
 void solve(int n, int m, const vector<vector<int>>& table, const vector<int>& sequence, int desired_result) {
 
-    // Matriz dinâmica para DP (cada célula contém uma lista de resultados possíveis)
     vector<vector<vector<Result>>> dp(m, vector<vector<Result>>(m));
 
+    for (int i = 0; i < m; i++) {
+        dp[i][i].push_back({sequence[i], 0, nullptr, nullptr});
+    }
 
-    // Inicializar os elementos unicos da seq
-    // Já agora vamos inicializar também a prox diagonal
-// Initialize base cases
-for (int i = 0; i < m; i++) {
-    dp[i][i].push_back({sequence[i], 0, nullptr, nullptr});
-}
+    for (int i = 0; i < m - 1; i++) {
+        int value = op(sequence[i], sequence[i + 1], table);
+        dp[i][i + 1].push_back(
+            {value, i, make_shared<Result>(dp[i][i][0]), make_shared<Result>(dp[i + 1][i + 1][0])});
+    }
 
-for (int i = 0; i < m - 1; i++) {
-    int value = op(sequence[i], sequence[i + 1], table);
-    dp[i][i + 1].push_back(
-        {value, i, make_shared<Result>(dp[i][i][0]), make_shared<Result>(dp[i + 1][i + 1][0])});
-}
-
-// Fill the DP table
-for (int diagonal = 2; diagonal < m; diagonal++) {
-    for (int i = 0; i < m - diagonal; i++) {
-        int j = i + diagonal;
-        int sub_lista1 = dp[i][j - 1].size();
-        int sub_lista2 = dp[i + 1][j].size();
-        for (int left = 0; left < sub_lista1; left++) {
-            int value = op(dp[i][j - 1][left].value, dp[i + diagonal][j][0].value, table);
-            if (!find_in_vector(dp[i][j], value))
-                dp[i][j].push_back(
-                    {value, dp[i][j - 1][left].parametrizacao, make_shared<Result>(dp[i][j - 1][left]), make_shared<Result>(dp[i + diagonal][j][0])});
-        }
-        for (int below = 0; below < sub_lista2; below++) {
-            int value = op(dp[i][j - diagonal][0].value, dp[i + 1][j][below].value, table);
-            if (!find_in_vector(dp[i][j], value))
-                dp[i][j].push_back(
-                    {value, dp[i + 1][j][below].parametrizacao , make_shared<Result>(dp[i][j - diagonal][0]), make_shared<Result>(dp[i + 1][j][below])});
+    for (int diagonal = 2; diagonal < m; diagonal++) {
+        for (int i = 0; i < m - diagonal; i++) {
+            int j = i + diagonal;
+            int sub_lista1 = dp[i][j - 1].size();
+            int sub_lista2 = dp[i + 1][j].size();
+            for (int left = 0; left < sub_lista1; left++) {
+                int value = op(dp[i][j - 1][left].value, dp[i + diagonal][j][0].value, table);
+                if (!find_in_vector(dp[i][j], value))
+                    dp[i][j].push_back(
+                        {value, dp[i][j - 1][left].parametrizacao, make_shared<Result>(dp[i][j - 1][left]), make_shared<Result>(dp[i + diagonal][j][0])});
+            }
+            for (int below = 0; below < sub_lista2; below++) {
+                int value = op(dp[i][j - diagonal][0].value, dp[i + 1][j][below].value, table);
+                if (!find_in_vector(dp[i][j], value))
+                    dp[i][j].push_back(
+                        {value, dp[i + 1][j][below].parametrizacao , make_shared<Result>(dp[i][j - diagonal][0]), make_shared<Result>(dp[i + 1][j][below])});
+            }
         }
     }
-}
     int len = dp[0][m - 1].size();
     for (int i = 0; i < len; i++){
         if (dp[0][m - 1][i].value == desired_result){
@@ -160,7 +131,6 @@ for (int diagonal = 2; diagonal < m; diagonal++) {
             break;
         }
     }
-    printMatrix(dp);
     printf("\n");
 }
 
