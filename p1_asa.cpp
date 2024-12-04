@@ -105,34 +105,51 @@ void solve(int n, int m, const vector<vector<int>>& table, const vector<int>& se
             {value, i, make_shared<Result>(dp[i][i][0]), make_shared<Result>(dp[i + 1][i + 1][0])});
     }
 
-    for (int diagonal = 2; diagonal < m; diagonal++) {
-        for (int i = 0; i < m - diagonal; i++) {
-            int j = i + diagonal;
-            int sub_lista1 = dp[i][j - 1].size();
-            int sub_lista2 = dp[i + 1][j].size();
+for (int diagonal = 2; diagonal < m; diagonal++) {  // Start with subarrays of size 2
+    for (int i = 0; i < m - diagonal; i++) {
+             // Start index of the subarray
+        int j = i + diagonal;
+        //cout << "Para a célula: " << "[" << i << "]["<< j << "]" << endl;               
+        for (int c = j-1; c >= i; c--) {  
+
+            int sub_lista1 = dp[i][c].size();       
+            int sub_lista2 = dp[c + 1][j].size();  
+            //cout << "Utilizamos as células: " << "[" << i << "]["<< c << "]" << endl;
+            //cout << "Utilizamos as células: " << "[" << c+1 << "]["<< j << "]" << endl;
             for (int left = 0; left < sub_lista1; left++) {
-                int value = op(dp[i][j - 1][left].value, dp[i + diagonal][j][0].value, table);
-                if (!find_in_vector(dp[i][j], value))
-                    dp[i][j].push_back(
-                        {value, dp[i][j - 1][left].parametrizacao, make_shared<Result>(dp[i][j - 1][left]), make_shared<Result>(dp[i + diagonal][j][0])});
-            }
-            for (int below = 0; below < sub_lista2; below++) {
-                int value = op(dp[i][j - diagonal][0].value, dp[i + 1][j][below].value, table);
-                if (!find_in_vector(dp[i][j], value))
-                    dp[i][j].push_back(
-                        {value, dp[i + 1][j][below].parametrizacao , make_shared<Result>(dp[i][j - diagonal][0]), make_shared<Result>(dp[i + 1][j][below])});
+                for (int down = 0; down < sub_lista2; down++) {
+                    
+                    // Combine results from left and down subarrays
+                    int value = op(dp[i][c][left].value, dp[c + 1][j][down].value, table);
+
+                    //cout <<"Combinamos com os seguintes valores: " << dp[i][c][left].value << "+" << dp[c + 1][j][down].value << "="<< value << endl;
+                    if(!find_in_vector(dp[i][j], value)){
+                        //cout << "Foi colocado: " <<value <<endl;
+                        dp[i][j].push_back({
+                            value, 
+                            dp[i][c][left].parametrizacao + dp[c + 1][j][down].parametrizacao + 1,
+                            make_shared<Result>(dp[i][c][left]), 
+                            make_shared<Result>(dp[c + 1][j][down])
+                        });
+                    }
+                    //} else  {cout << "Nao foi colocado: " << value<<endl;}
+                    //cout << endl;
+                }
             }
         }
     }
+}
+
     int len = dp[0][m - 1].size();
     for (int i = 0; i < len; i++){
         if (dp[0][m - 1][i].value == desired_result){
-            cout << desired_result << endl;
+            cout << 1 << endl;
             printTrace(make_shared<Result>(dp[0][m - 1][i]));
-            break;
+            printf("\n");
+            return;
         }
     }
-    printf("\n");
+    cout << 0 << endl;
 }
 
 
