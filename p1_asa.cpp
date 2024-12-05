@@ -17,15 +17,30 @@ struct Result {
     int left_index;
     int down_celula;
     int down_index;
-    bool operator==(const Result& other) const {
-        return value == other.value;
-    }
 };
+
 
 // Função para calcular a operação usando a tabela
 int op(int a, int b, const vector<vector<int>>& table) {
     return table[a - 1][b - 1]; // Ajuste de índices (1-base para 0-base)
 }
+
+void filterUnique(vector<Result>& results) {
+    map<int, Result> bestResults;
+
+    for (Result res : results) {
+        if (bestResults.find(res.value) == bestResults.end() || 
+            res.parametrizacao < bestResults[res.value].parametrizacao) {
+            bestResults[res.value] = res;
+        }
+    }
+
+    results.clear();
+    for (const auto& res : bestResults) {
+        results.push_back(res.second);
+    }
+}
+
 
 void printTrace(const Result& res, const vector<vector<vector<Result>>>& dp, int i, int j) {
     if (res.parametrizacao == -1) {
@@ -76,6 +91,12 @@ bool find_in_vector(vector<Result>& results, int value){
     return false;
 }
 
+int get_value(const vector<vector<vector<Result>>>& dp, int i, int j, Result res,const vector<vector<int>>& table){
+    int value_left = dp[i][res.left_celula-1][res.left_index].value;
+    int value_down = dp[i-res.down_celula+1][j][res.down_index].value;
+    return op(value_left, value_down, table);
+}
+
 
 
 void solve(int n, int m, const vector<vector<int>>& table, const vector<int>& sequence, int desired_result) {
@@ -107,22 +128,22 @@ for (int diagonal = 2; diagonal < m; diagonal++) {
             //cout << "Utilizamos as células: " << "[" << c+1 << "]["<< j << "]" << endl;
             
 
-            
+            if (count >= n){break;}
             for (int left = 0; left < sub_lista1; left++) {
+                if (count >= n){break;}
                 for (int down = 0; down < sub_lista2; down++) {
                 
                     int value = op(dp[i][c][left].value, dp[c + 1][j][down].value, table);
-                     
+                    if (count >= n){break;}
                     //cout <<"Combinamos com os seguintes valores: " << dp[i][c][left].value << "+" << dp[c + 1][j][down].value << "="<< value << endl;
-                    if(find(dp[i][j].begin(), dp[i][j].end(), value) != dp[i][j].end()){
+                    if(!find_in_vector(dp[i][j], value)){
                         //cout << "Foi colocado: " <<value <<endl;
                         dp[i][j].push_back({
                             value, 
                             dp[i][c][left].parametrizacao + dp[c + 1][j][down].parametrizacao + 1,
                             c, left,
                             c+1, down});
-                            
-                
+                            count++;
                      }
                     
                      //else  {cout << "Nao foi colocado: " << value<<endl;}
@@ -136,7 +157,7 @@ for (int diagonal = 2; diagonal < m; diagonal++) {
         
         
     }
-    
+
     int len = dp[0][m - 1].size();
     for (int i = 0; i < len; i++){
         if (dp[0][m - 1][i].value == desired_result){
