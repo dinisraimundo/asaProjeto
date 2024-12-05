@@ -9,36 +9,37 @@
 
 using namespace std;
 
-// Estrutura para armazenar o valor e a expressão
+// Estrutura para cada celula da matriz
 struct Result {
     int value;        
     int parametrizacao;
-    shared_ptr<Result> left; 
-    shared_ptr<Result> down;
-
+    int left_celula;
+    int left_index;
+    int down_celula;
+    int down_index;
+    bool operator==(const Result& other) const {
+        return value == other.value;
+    }
 };
-
 
 // Função para calcular a operação usando a tabela
 int op(int a, int b, const vector<vector<int>>& table) {
     return table[a - 1][b - 1]; // Ajuste de índices (1-base para 0-base)
 }
 
-void filterUnique(vector<Result>& results) {
-    map<int, Result> bestResults;
-
-    for (Result res : results) {
-        if (bestResults.find(res.value) == bestResults.end() || 
-            res.parametrizacao < bestResults[res.value].parametrizacao) {
-            bestResults[res.value] = res;
-        }
+void printTrace(const Result& res, const vector<vector<vector<Result>>>& dp, int i, int j) {
+    if (res.parametrizacao == -1) {
+        cout << res.value;
+        return;
     }
-
-    results.clear();
-    for (const auto& res : bestResults) {
-        results.push_back(res.second);
-    }
+    cout << "(";
+    printTrace(dp[i][res.left_celula][res.left_index], dp, i, res.left_celula);
+    cout << " ";
+    printTrace(dp[res.down_celula][j][res.down_index], dp, res.down_celula, j);
+    cout << ")";
 }
+
+
 
 
 void printMatrix(const vector<vector<vector<Result>>>& dp) {
@@ -55,7 +56,7 @@ void printMatrix(const vector<vector<vector<Result>>>& dp) {
             } else {
                 cout << "[";
                 for (const auto& res : dp[i][j]) {
-                        cout << res.value << "|" << res.parametrizacao<< " "; 
+                        cout << res.value << "->" << res.parametrizacao<< " " << res.left_celula << ":"<<res.left_index<< " "<< res.down_celula << ":"<<res.down_index<< " |||"; 
                     
                 }
                 cout << "] ";
@@ -76,79 +77,77 @@ bool find_in_vector(vector<Result>& results, int value){
 }
 
 
-void printTrace(const shared_ptr<Result>& res) {
-    if (!res) return;
-
-    if (res->left || res->down) {
-        cout << "(";
-        printTrace(res->left);
-        cout << " ";
-        printTrace(res->down);
-        cout << ")";
-    } else {
-        cout << res->value;
-    }
-}
-
 
 void solve(int n, int m, const vector<vector<int>>& table, const vector<int>& sequence, int desired_result) {
 
     vector<vector<vector<Result>>> dp(m, vector<vector<Result>>(m));
 
     for (int i = 0; i < m; i++) {
-        dp[i][i].push_back({sequence[i], 0, nullptr, nullptr});
+        dp[i][i].push_back({sequence[i], -1, -1, -1,-1,-1});
     }
 
     for (int i = 0; i < m - 1; i++) {
         int value = op(sequence[i], sequence[i + 1], table);
         dp[i][i + 1].push_back(
-            {value, i, make_shared<Result>(dp[i][i][0]), make_shared<Result>(dp[i + 1][i + 1][0])});
+            {value, i, i, 0, i+1,0});
     }
-
-for (int diagonal = 2; diagonal < m; diagonal++) {  // Start with subarrays of size 2
-    for (int i = 0; i < m - diagonal; i++) {
-             // Start index of the subarray
+// Primeiros 2 for's sao essenciais sendo que definem cada célula a
+for (int diagonal = 2; diagonal < m; diagonal++) { 
+    for (int i = 0; i < m - diagonal; i++) { 
         int j = i + diagonal;
+        int count = 0;
         //cout << "Para a célula: " << "[" << i << "]["<< j << "]" << endl;               
         for (int c = j-1; c >= i; c--) {  
 
             int sub_lista1 = dp[i][c].size();       
-            int sub_lista2 = dp[c + 1][j].size();  
+            int sub_lista2 = dp[c + 1][j].size(); 
+            
+             
             //cout << "Utilizamos as células: " << "[" << i << "]["<< c << "]" << endl;
             //cout << "Utilizamos as células: " << "[" << c+1 << "]["<< j << "]" << endl;
+            
+
+            
             for (int left = 0; left < sub_lista1; left++) {
                 for (int down = 0; down < sub_lista2; down++) {
-                    
-                    // Combine results from left and down subarrays
+                
                     int value = op(dp[i][c][left].value, dp[c + 1][j][down].value, table);
-
+                     
                     //cout <<"Combinamos com os seguintes valores: " << dp[i][c][left].value << "+" << dp[c + 1][j][down].value << "="<< value << endl;
-                    if(!find_in_vector(dp[i][j], value)){
+                    if(find(dp[i][j].begin(), dp[i][j].end(), value) != dp[i][j].end()){
                         //cout << "Foi colocado: " <<value <<endl;
                         dp[i][j].push_back({
                             value, 
                             dp[i][c][left].parametrizacao + dp[c + 1][j][down].parametrizacao + 1,
-                            make_shared<Result>(dp[i][c][left]), 
-                            make_shared<Result>(dp[c + 1][j][down])
-                        });
-                    }
-                    //} else  {cout << "Nao foi colocado: " << value<<endl;}
-                    //cout << endl;
+                            c, left,
+                            c+1, down});
+                            
+                
+                     }
+                    
+                     //else  {cout << "Nao foi colocado: " << value<<endl;}
                 }
             }
+                //cout << endl;
+            
+            }
+            
         }
+        
+        
     }
-}
-
+    
     int len = dp[0][m - 1].size();
     for (int i = 0; i < len; i++){
         if (dp[0][m - 1][i].value == desired_result){
             cout << 1 << endl;
-            printTrace(make_shared<Result>(dp[0][m - 1][i]));
+            printTrace(dp[0][m-1][i], dp, 0, m-1);
             printf("\n");
             return;
         }
     }
+
+
     cout << 0 << endl;
 }
 
@@ -157,6 +156,7 @@ for (int diagonal = 2; diagonal < m; diagonal++) {  // Start with subarrays of s
 
 
 int main() {
+
     int n, m, desired_result;
 
     // Leitura do tamanho do conjunto e da sequência
