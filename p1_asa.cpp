@@ -18,15 +18,11 @@ struct Result {
     int down_index;
 };
 
-
-// Função para calcular a operação usando a tabela
 int op(int a, int b, const vector<vector<int>>& table) {
     return table[a - 1][b - 1]; // Ajuste de índices (1-base para 0-base)
 }
 
-
-
-
+// Rastrear solucao
 void printTrace(const Result& res, const vector<vector<vector<Result>>>& dp, int i, int j) {
     if (res.left_celula == -1) {
         cout << res.value;
@@ -39,7 +35,7 @@ void printTrace(const Result& res, const vector<vector<vector<Result>>>& dp, int
     cout << ")";
 }
 
-
+// Procura linear
 bool find_in_vector(vector<Result>& results, int value){
     int len = results.size();
     for (int i = 0; i < len; i++){
@@ -50,14 +46,7 @@ bool find_in_vector(vector<Result>& results, int value){
     return false;
 }
 
-int get_value(const vector<vector<vector<Result>>>& dp, int i, int j, Result res,const vector<vector<int>>& table){
-    int value_left = dp[i][res.left_celula-1][res.left_index].value;
-    int value_down = dp[i-res.down_celula+1][j][res.down_index].value;
-    return op(value_left, value_down, table);
-}
-
-
-
+// Resolver o problema
 void solve(int n, int m, const vector<vector<int>>& table, const vector<int>& sequence, int desired_result) {
 
     vector<vector<vector<Result>>> dp(m, vector<vector<Result>>(m));
@@ -71,42 +60,39 @@ void solve(int n, int m, const vector<vector<int>>& table, const vector<int>& se
         dp[i][i + 1].push_back(
             {value, i, 0, i+1,0});
     }
-for (int diagonal = 2; diagonal < m; diagonal++) { // O(m)
-    for (int i = 0; i < m - diagonal; i++) {  // O(m^2)
-        int j = i + diagonal;
-        int count = 0;             
-        for (int c = j-1; c >= i; c--) {  // O(m^3)
+    // Para cada diagonal/tamanho da sequencia
+    for (int diagonal = 2; diagonal < m; diagonal++) { // O(m)
+        // Percorrer diagonal
+        for (int i = 0; i < m - diagonal; i++) {  // O(m)
+            int j = i + diagonal;
+            int count = 0;   
+            // Percorrer todas as celulas          
+            for (int c = j-1; c >= i; c--) {  // O(m)
 
-            int sub_lista1 = dp[i][c].size(); 
-            int sub_lista2 = dp[c + 1][j].size(); 
-            
-
-            if (count >= n){break;}
-            
-            for (int left = 0; left < sub_lista1; left++) { // O()
-                if (count >= n){break;}
-                for (int down = 0; down < sub_lista2; down++) { // O()
+                int sub_lista1 = dp[i][c].size(); 
+                int sub_lista2 = dp[c + 1][j].size(); 
                 
-                    int value = op(dp[i][c][left].value, dp[c + 1][j][down].value, table);
-                    if (count >= n){break;}
-    
-                    if(!find_in_vector(dp[i][j], value)){ // O()
-                        dp[i][j].push_back({
-                            value, 
-                            c, left,
-                            c+1, down});
-                            count++;
-                     }
-                    
-                }
-            }
-            
-            
-            }
-            
-        }
-        
-        
+                // Percorrer todos os vetores nas celulas
+                // Em conjunto, sendo que temos um bound n, podemos dizer O(n^2)
+                for (int left = 0; left < sub_lista1; left++) { // O(n)
+                    for (int down = 0; down < sub_lista2; down++) { // O(n)
+
+                        if (count >= n){break;} // bound
+                        int value = op(dp[i][c][left].value, dp[c + 1][j][down].value, table);
+
+                        if(!find_in_vector(dp[i][j], value)){ // O(n)
+                            dp[i][j].push_back({
+                                value, 
+                                c, left,
+                                c+1, down});
+                                count++;
+                        } 
+                    }
+                    if (count >= n){break;} 
+                } 
+                if (count >= n){break;}
+            } 
+        }    
     }
 
     int len = dp[0][m - 1].size();
@@ -118,13 +104,8 @@ for (int diagonal = 2; diagonal < m; diagonal++) { // O(m)
             return;
         }
     }
-
-
     cout << 0 << endl;
 }
-
-
-
 
 
 int main() {
@@ -152,10 +133,7 @@ int main() {
     cin >> desired_result;
 
     // Resolver o problema
-
-
     solve(n, m, table, sequence, desired_result);
 
     return 0;
-    
 }
