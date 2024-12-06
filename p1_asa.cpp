@@ -109,7 +109,8 @@ void solve(int n, int m, const vector<vector<int>>& table, const vector<int>& se
 
 
 int main() {
-
+    std::ios::sync_with_stdio(0);
+    std::cin.tie(0);
     int n, m, desired_result;
 
     // Leitura do tamanho do conjunto e da sequência
